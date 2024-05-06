@@ -244,3 +244,10 @@ def modified_forward_context_manager(
 ) -> ContextManager:
     context_manager = CombinedContextManager([*forward_modifiers])
     return context_manager
+
+
+def ensure_cuda(tensor_or_model):
+    """Move tensor or model to CUDA if not already on CUDA."""
+    if tensor_or_model.device != torch.device('cuda'):
+        tensor_or_model = tensor_or_model.to('cuda')
+    return tensor_or_model
