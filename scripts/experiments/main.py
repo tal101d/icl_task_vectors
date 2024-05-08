@@ -67,7 +67,7 @@ def evaluate_task(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, task_n
 
     except Exception as e:
         logging.error(f"Error evaluating task {task_name}: {e}", exc_info=True)
-        return None, None
+        raise
 
 
 def run_main_experiment(
