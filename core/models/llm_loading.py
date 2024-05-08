@@ -1,6 +1,6 @@
 import os
 from typing import Literal, Tuple, Optional
-from scripts.experiments.main import logger
+from logger import logger
 import torch
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 

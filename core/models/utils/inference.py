@@ -3,7 +3,7 @@ from typing import ContextManager, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
-from scripts.experiments.main import logger
+from logger import logger
 from tqdm import tqdm
 from transformers import PreTrainedModel, PreTrainedTokenizer
 from transformers.modeling_outputs import CausalLMOutputWithPast

@@ -7,7 +7,7 @@ import sys
 import os
 import pickle
 import time
-import logging
+from logger import logger
 from typing import Optional
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
