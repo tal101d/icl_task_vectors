@@ -38,6 +38,7 @@ def evaluate_task(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, task_n
         # Evaluate baseline
         baseline_datasets = task.create_datasets(num_datasets=100, num_examples=0)
         predictions = run_icl(model, tokenizer, task, baseline_datasets, include_train=False)
+        torch.cuda.empty_cache()
         accuracies["baseline"] = calculate_accuracy_on_datasets(task, predictions, baseline_datasets)
 
         # Evaluate ICL and Task Vector
@@ -45,6 +46,7 @@ def evaluate_task(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, task_n
         test_datasets = task.create_datasets(num_datasets=num_test_datasets, num_examples=num_examples)
         dev_datasets = task.create_datasets(num_datasets=num_dev_datasets, num_examples=num_examples)
         icl_predictions = run_icl(model, tokenizer, task, test_datasets)
+        torch.cuda.empty_cache()
         tv_predictions, tv_dev_accuracy_by_layer, task_hiddens = run_task_vector(
             model,
             tokenizer,
@@ -52,6 +54,7 @@ def evaluate_task(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, task_n
             test_datasets,
             dev_datasets,
         )
+        torch.cuda.empty_cache()
         accuracies["tv_dev_by_layer"] = tv_dev_accuracy_by_layer
         accuracies["icl"] = calculate_accuracy_on_datasets(task, icl_predictions, test_datasets)
         accuracies["tv"] = calculate_accuracy_on_datasets(task, tv_predictions, test_datasets)
