@@ -3,6 +3,7 @@ from typing import ContextManager, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
+import logging
 from tqdm import tqdm
 from transformers import PreTrainedModel, PreTrainedTokenizer
 from transformers.modeling_outputs import CausalLMOutputWithPast
@@ -15,6 +16,7 @@ from core.models.context_managers.utils import CombinedContextManager
 from core.models.utils.llm_layers import get_lm_pipeline
 from core.utils.misc import get_nested_tensor_size
 from core.utils.nested import nested_apply, nested_concat
+
 
 
 def traced_forward(
