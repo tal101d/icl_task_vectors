@@ -1,3 +1,9 @@
+import sys
+import os
+# Adjust the path below to the root directory of your project
+sys.path.append(os.path.abspath('/content/icl_task_vectors'))
+
+
 from core.data.preparation.knowledge_data import prepare_knowledge_data
 from core.data.preparation.linguistic_data import prepare_linguistic_data
 from core.data.preparation.translation_data import prepare_translation_data
