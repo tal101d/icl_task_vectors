@@ -24,15 +24,19 @@ def traced_forward(
     batch_size: Optional[int] = None,
     forward_modifiers: Optional[Iterable[ContextManager]] = (),
 ) -> Tuple[CausalLMOutputWithPast, ForwardTrace]:
-    context_manager, forward_trace = traced_forward_context_manager(model)
-    with context_manager:
-        outputs = modified_forward(
-            model,
-            inputs=inputs,
-            forward_kwargs=forward_kwargs,
-            batch_size=batch_size,
-            forward_modifiers=forward_modifiers,
-        )
+    try:
+        context_manager, forward_trace = traced_forward_context_manager(model)
+        with context_manager:
+            outputs = modified_forward(
+                model,
+                inputs=inputs,
+                forward_kwargs=forward_kwargs,
+                batch_size=batch_size,
+                forward_modifiers=forward_modifiers,
+            )
+    except Exception as e:
+        logging.error(f"Error during traced_forward", exc_info=True)
+        raise
 
     return outputs, forward_trace
 
@@ -44,14 +48,18 @@ def modified_forward(
     batch_size: Optional[int] = None,
     forward_modifiers: Optional[Iterable[ContextManager]] = (),
 ) -> CausalLMOutputWithPast:
-    context_manager = modified_forward_context_manager(model, forward_modifiers=forward_modifiers)
-    with context_manager:
-        outputs = batch_forward(
-            model,
-            inputs=inputs,
-            forward_kwargs=forward_kwargs,
-            batch_size=batch_size,
-        )
+    try:
+        context_manager = modified_forward_context_manager(model, forward_modifiers=forward_modifiers)
+        with context_manager:
+            outputs = batch_forward(
+                model,
+                inputs=inputs,
+                forward_kwargs=forward_kwargs,
+                batch_size=batch_size,
+            )
+    except Exception as e:
+        logging.error(f"Error during modified_forward", exc_info=True)
+        raise
 
     return outputs
 
@@ -87,32 +95,39 @@ def _get_batches(inputs: Dict, batch_size: int, show_progress: bool = False) -> 
 
     return batches
 
+    def batch_forward(
+        model: PreTrainedModel,
+        inputs: Dict,
+        forward_kwargs: Optional[Dict] = None,
+        batch_size: int = 100,
+        show_progress: bool = False,
+    ) -> CausalLMOutputWithPast:
+        try:
+            batch_size = batch_size or _auto_batch_size(model, inputs)
+            forward_kwargs = _get_forward_kwargs(forward_kwargs)
 
-def batch_forward(
-    model: PreTrainedModel,
-    inputs: Dict,
-    forward_kwargs: Optional[Dict] = None,
-    batch_size: int = 100,
-    show_progress: bool = False,
-) -> CausalLMOutputWithPast:
-    batch_size = batch_size or _auto_batch_size(model, inputs)
-    forward_kwargs = _get_forward_kwargs(forward_kwargs)
+            batches = _get_batches(inputs, batch_size, show_progress=show_progress)
 
-    batches = _get_batches(inputs, batch_size, show_progress=show_progress)
+            device = model.device
 
-    device = model.device
+            outputs = []
+            for batch_inputs in batches:
+                batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
 
-    outputs = []
-    for batch_inputs in batches:
-        batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
+                try:
+                    with torch.no_grad():
+                        out = model(**batch_inputs, **forward_kwargs)
+                        output_class = out.__class__
+                        out = nested_apply(out, lambda t: t.cpu())
+                    outputs.append(out)
+                except Exception as e:
+                    logging.error(f"Error during generating output in batch_forward", exc_info=True)
+                    raise
 
-        with torch.no_grad():
-            out = model(**batch_inputs, **forward_kwargs)
-            output_class = out.__class__
-            out = nested_apply(out, lambda t: t.cpu())
-        outputs.append(out)
-
-    return output_class(**nested_concat(outputs))
+            return output_class(**nested_concat(outputs))
+        except Exception as e:
+            logging.error(f"Error during batch_forward", exc_info=True)
+            raise
 
 
 def _auto_batch_size(model: PreTrainedModel, inputs: Dict) -> int:
@@ -140,38 +155,41 @@ def batch_generate(
     batch_size: Optional[int] = None,
     show_progress: bool = False,
 ) -> List[str]:
-    batch_size = batch_size or _auto_batch_size(model, inputs)
+    try:
+        batch_size = batch_size or _auto_batch_size(model, inputs)
 
-    generate_kwargs = _get_forward_kwargs(generate_kwargs)
-    batches = _get_batches(inputs, batch_size, show_progress=show_progress)
-    input_type = get_input_type(inputs)
+        generate_kwargs = _get_forward_kwargs(generate_kwargs)
+        batches = _get_batches(inputs, batch_size, show_progress=show_progress)
+        input_type = get_input_type(inputs)
 
-    device = model.device
+        device = model.device
 
-    model = ensure_cuda(model)
+        model = ensure_cuda(model)
 
-    
-    generate_ids = []
-    for batch_inputs in batches:
-        batch_inputs = nested_apply(batch_inputs, lambda t: t.to("cpu"))
+        generate_ids = []
+        for batch_inputs in batches:
+            batch_inputs = nested_apply(batch_inputs, lambda t: t.to("cpu"))
 
-        batch_ids = model.generate(
-            **batch_inputs,
-            **generate_kwargs,
-            do_sample=False,
-            num_return_sequences=1,
-            pad_token_id=tokenizer.pad_token_id,
-        )
-        generate_ids.append(batch_ids)
+            batch_ids = model.generate(
+                **batch_inputs,
+                **generate_kwargs,
+                do_sample=False,
+                num_return_sequences=1,
+                pad_token_id=tokenizer.pad_token_id,
+            )
+            generate_ids.append(batch_ids)
 
-    generate_ids = torch.cat(generate_ids, dim=0)
+        generate_ids = torch.cat(generate_ids, dim=0)
 
-    new_ids = generate_ids[:, inputs[input_type].shape[1] :]
+        new_ids = generate_ids[:, inputs[input_type].shape[1] :]
 
-    # outs = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-    # completions = [out[len(prompt) :] for out, prompt in zip(outs, prompts)]
+        # outs = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+        # completions = [out[len(prompt) :] for out, prompt in zip(outs, prompts)]
 
-    return new_ids
+        return new_ids
+    except Exception as e:
+        logging.error(f"Error during batch_generate", exc_info=True)
+        raise
 
 
 def decode_predictions(
