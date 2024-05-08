@@ -162,13 +162,14 @@ def batch_generate(
         batches = _get_batches(inputs, batch_size, show_progress=show_progress)
         input_type = get_input_type(inputs)
 
+        model = ensure_cuda(model)
         device = model.device
 
-        model = ensure_cuda(model)
+
 
         generate_ids = []
         for batch_inputs in batches:
-            batch_inputs = nested_apply(batch_inputs, lambda t: t.to("cpu"))
+            batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
 
             batch_ids = model.generate(
                 **batch_inputs,
