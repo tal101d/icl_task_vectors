@@ -95,39 +95,39 @@ def _get_batches(inputs: Dict, batch_size: int, show_progress: bool = False) -> 
 
     return batches
 
-    def batch_forward(
-        model: PreTrainedModel,
-        inputs: Dict,
-        forward_kwargs: Optional[Dict] = None,
-        batch_size: int = 100,
-        show_progress: bool = False,
-    ) -> CausalLMOutputWithPast:
-        try:
-            batch_size = batch_size or _auto_batch_size(model, inputs)
-            forward_kwargs = _get_forward_kwargs(forward_kwargs)
+def batch_forward(
+    model: PreTrainedModel,
+    inputs: Dict,
+    forward_kwargs: Optional[Dict] = None,
+    batch_size: int = 100,
+    show_progress: bool = False,
+) -> CausalLMOutputWithPast:
+    try:
+        batch_size = batch_size or _auto_batch_size(model, inputs)
+        forward_kwargs = _get_forward_kwargs(forward_kwargs)
 
-            batches = _get_batches(inputs, batch_size, show_progress=show_progress)
+        batches = _get_batches(inputs, batch_size, show_progress=show_progress)
 
-            device = model.device
+        device = model.device
 
-            outputs = []
-            for batch_inputs in batches:
-                batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
+        outputs = []
+        for batch_inputs in batches:
+            batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
 
-                try:
-                    with torch.no_grad():
-                        out = model(**batch_inputs, **forward_kwargs)
-                        output_class = out.__class__
-                        out = nested_apply(out, lambda t: t.cpu())
-                    outputs.append(out)
-                except Exception as e:
-                    logging.error(f"Error during generating output in batch_forward", exc_info=True)
-                    raise
+            try:
+                with torch.no_grad():
+                    out = model(**batch_inputs, **forward_kwargs)
+                    output_class = out.__class__
+                    out = nested_apply(out, lambda t: t.cpu())
+                outputs.append(out)
+            except Exception as e:
+                logging.error(f"Error during generating output in batch_forward", exc_info=True)
+                raise
 
-            return output_class(**nested_concat(outputs))
-        except Exception as e:
-            logging.error(f"Error during batch_forward", exc_info=True)
-            raise
+        return output_class(**nested_concat(outputs))
+    except Exception as e:
+        logging.error(f"Error during batch_forward", exc_info=True)
+        raise
 
 
 def _auto_batch_size(model: PreTrainedModel, inputs: Dict) -> int:
