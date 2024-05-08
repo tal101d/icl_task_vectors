@@ -141,11 +141,13 @@ def _auto_batch_size(model: PreTrainedModel, inputs: Dict) -> int:
     base_batch_size = 400
     base_model_size_gb = 11.5  # pythia-12b
     base_sequence_length = 50
+    
 
     model_size_gb = sum(get_nested_tensor_size(t) for t in model.parameters()) / (1024**3)
     sequence_length = inputs[get_input_type(inputs)].shape[1]
 
     batch_size = int(base_batch_size * (base_model_size_gb / model_size_gb) * (base_sequence_length / sequence_length))
+    logger.info(f"batch_size: {batch_size}")
 
     # print(f"Model size: {model_size_gb:.2f} GB")
     # print(f"Sequence length: {sequence_length}")
@@ -176,14 +178,14 @@ def batch_generate(
         generate_ids = []
         for batch_inputs in batches:
             batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
-
-            batch_ids = model.generate(
-                **batch_inputs,
-                **generate_kwargs,
-                do_sample=False,
-                num_return_sequences=1,
-                pad_token_id=tokenizer.pad_token_id,
-            )
+            with torch.no_grad():
+                batch_ids = model.generate(
+                    **batch_inputs,
+                    **generate_kwargs,
+                    do_sample=False,
+                    num_return_sequences=1,
+                    pad_token_id=tokenizer.pad_token_id,
+                )
             generate_ids.append(batch_ids)
 
         generate_ids = torch.cat(generate_ids, dim=0)
@@ -192,7 +194,6 @@ def batch_generate(
 
         # outs = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
         # completions = [out[len(prompt) :] for out, prompt in zip(outs, prompts)]
-
         return new_ids
     except Exception as e:
         logger.error(f"Error during batch_generate", exc_info=True)

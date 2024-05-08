@@ -7,6 +7,7 @@ import sys
 import os
 import pickle
 import time
+import torch
 from logger import logger
 from typing import Optional
 from transformers import PreTrainedModel, PreTrainedTokenizer
@@ -95,7 +96,8 @@ def run_main_experiment(
         if model is None or tokenizer is None:
             model, tokenizer = load_model_and_tokenizer(model_type, model_variant)
         logger.info("Loaded model and tokenizer.")
-
+        print_GPU_memory_status()
+        logger.info(torch.cuda.memory_summary())
         tasks = get_all_tasks(tokenizer=tokenizer)
         num_examples = 5
 
@@ -127,7 +129,8 @@ def run_main_experiment(
                 }
                 with open(results_file, "wb") as f:
                     pickle.dump(results, f)
-        del model, tokenizer
+            torch.cuda.empty_cache()
+        
 
     except Exception as e:
         logger.error(f"Error during main experiment execution: {e}", exc_info=True)
@@ -143,7 +146,14 @@ def get_new_experiment_id() -> str:
         logger.error(f"Error generating new experiment ID: {e}", exc_info=True)
         raise e
     
-
+def print_GPU_memory_status():
+    if torch.cuda.is_available():
+        allocated = torch.cuda.memory_allocated()
+        reserved = torch.cuda.memory_reserved()
+        free = torch.cuda.memory_reserved() - torch.cuda.memory_allocated()
+        logger.info(f"GPU Memory - Allocated: {allocated / (1024**2):.2f} MiB, Reserved: {reserved / (1024**2):.2f} MiB, Free: {free / (1024**2):.2f} MiB")
+    else:
+        logger.info("CUDA is not available.")
 
 def main():
     try:
@@ -152,6 +162,7 @@ def main():
             experiment_id = get_new_experiment_id()
             for model_type, model_variant in MODELS_TO_EVALUATE:
                 run_main_experiment(model_type, model_variant, experiment_id=experiment_id)
+                torch.cuda.empty_cache()
         else:
             if len(sys.argv) == 2:
                 model_num = int(sys.argv[1])
