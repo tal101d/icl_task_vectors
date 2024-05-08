@@ -18,6 +18,26 @@ from core.utils.misc import get_nested_tensor_size
 from core.utils.nested import nested_apply, nested_concat
 
 
+# Create a basic logger
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+# Create a console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# Define a formatter including the date and time
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# Assign the formatter to the handler
+console_handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(console_handler)
+
 
 def traced_forward(
     model: PreTrainedModel,
