@@ -3,7 +3,7 @@ from typing import ContextManager, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
-import logging
+from scripts.experiments.main import logger
 from tqdm import tqdm
 from transformers import PreTrainedModel, PreTrainedTokenizer
 from transformers.modeling_outputs import CausalLMOutputWithPast
@@ -16,28 +16,6 @@ from core.models.context_managers.utils import CombinedContextManager
 from core.models.utils.llm_layers import get_lm_pipeline
 from core.utils.misc import get_nested_tensor_size
 from core.utils.nested import nested_apply, nested_concat
-
-
-# Create a basic logger
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
-# Create a console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-# Define a formatter including the date and time
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
-# Assign the formatter to the handler
-console_handler.setFormatter(formatter)
-
-# Add the handler to the logger
-logger.addHandler(console_handler)
-
 
 def traced_forward(
     model: PreTrainedModel,
@@ -57,7 +35,7 @@ def traced_forward(
                 forward_modifiers=forward_modifiers,
             )
     except Exception as e:
-        logging.error(f"Error during traced_forward", exc_info=True)
+        logger.error(f"Error during traced_forward", exc_info=True)
         raise
 
     return outputs, forward_trace
@@ -80,7 +58,7 @@ def modified_forward(
                 batch_size=batch_size,
             )
     except Exception as e:
-        logging.error(f"Error during modified_forward", exc_info=True)
+        logger.error(f"Error during modified_forward", exc_info=True)
         raise
 
     return outputs
@@ -143,12 +121,12 @@ def batch_forward(
                     out = nested_apply(out, lambda t: t.cpu())
                 outputs.append(out)
             except Exception as e:
-                logging.error(f"Error during generating output in batch_forward", exc_info=True)
+                logger.error(f"Error during generating output in batch_forward", exc_info=True)
                 raise
 
         return output_class(**nested_concat(outputs))
     except Exception as e:
-        logging.error(f"Error during batch_forward", exc_info=True)
+        logger.error(f"Error during batch_forward", exc_info=True)
         raise
 
 
@@ -210,7 +188,7 @@ def batch_generate(
 
         return new_ids
     except Exception as e:
-        logging.error(f"Error during batch_generate", exc_info=True)
+        logger.error(f"Error during batch_generate", exc_info=True)
         raise
 
 

@@ -1,29 +1,8 @@
 import os
 from typing import Literal, Tuple, Optional
-import logging
+from scripts.experiments.main import logger
 import torch
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
-
-# Setup logging
-# Create a basic logger
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
-# Create a console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-# Define a formatter including the date and time
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
-# Assign the formatter to the handler
-console_handler.setFormatter(formatter)
-
-# Add the handler to the logger
-logger.addHandler(console_handler)
 
 
 # Base configuration for model loading
@@ -43,7 +22,7 @@ def llama_local_path(variant: Literal["huggingface", "vicuna"], size: Literal["7
     path = f"{llama_dir}/{variant}/{size}"
     if os.path.exists(path):
         return path
-    logging.error(f"Llama model path does not exist: {path}")
+    logger.error(f"Llama model path does not exist: {path}")
     return None
 
 def get_model_path(model_type: str, model_variant: str) -> str:
@@ -51,7 +30,7 @@ def get_model_path(model_type: str, model_variant: str) -> str:
     try:
         return MODEL_PATHS[model_type][model_variant]
     except KeyError as e:
-        logging.error(f"Model type or variant not found: {e}")
+        logger.error(f"Model type or variant not found: {e}")
         raise
 
 def load_model(model_type: str, model_variant: str) -> Optional[PreTrainedModel]:
@@ -64,7 +43,7 @@ def load_model(model_type: str, model_variant: str) -> Optional[PreTrainedModel]
             model.cuda()
         return model.eval()
     except Exception as e:
-        logging.error(f"Error loading model {model_type}, {model_variant}: {e}")
+        logger.error(f"Error loading model {model_type}, {model_variant}: {e}")
         raise
 
 def load_tokenizer(model_type: str, model_variant: str) -> Optional[PreTrainedTokenizer]:
@@ -75,7 +54,7 @@ def load_tokenizer(model_type: str, model_variant: str) -> Optional[PreTrainedTo
         _setup_tokenizer(tokenizer)
         return tokenizer
     except Exception as e:
-        logging.error(f"Error loading tokenizer for {model_type}, {model_variant}: {e}")
+        logger.error(f"Error loading tokenizer for {model_type}, {model_variant}: {e}")
         raise
 
 def load_model_and_tokenizer(model_type: str, model_variant: str) -> Tuple[Optional[PreTrainedModel], Optional[PreTrainedTokenizer]]:

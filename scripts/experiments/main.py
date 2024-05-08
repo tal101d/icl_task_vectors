@@ -7,7 +7,7 @@ import sys
 import os
 import pickle
 import time
-import logging
+import logger
 from typing import Optional
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
@@ -22,15 +22,15 @@ from core.utils.misc import limit_gpus, seed_everything
 from core.experiments_config import MODELS_TO_EVALUATE, TASKS_TO_EVALUATE
 
 # Create a basic logger
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger = logger.getLogger()
+logger.setLevel(logger.DEBUG)
 
 # Create a console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+console_handler = logger.StreamHandler()
+console_handler.setLevel(logger.DEBUG)
 
 # Define a formatter including the date and time
-formatter = logging.Formatter(
+formatter = logger.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -84,7 +84,7 @@ def evaluate_task(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, task_n
         return accuracies, tv_ordered_tokens_by_layer
 
     except Exception as e:
-        logging.error(f"Error evaluating task {task_name}: {e}", exc_info=True)
+        logger.error(f"Error evaluating task {task_name}: {e}", exc_info=True)
         raise
 
 
@@ -95,7 +95,7 @@ def run_main_experiment(
     model: Optional[PreTrainedModel] = None,
     tokenizer: Optional[PreTrainedTokenizer] = None,
 ) -> None:
-    logging.info(f"Evaluating model: {model_type}, {model_variant}")
+    logger.info(f"Evaluating model: {model_type}, {model_variant}")
 
     results_file = get_results_file_path(model_type, model_variant, experiment_id=experiment_id)
     os.makedirs(os.path.dirname(results_file), exist_ok=True)
@@ -105,37 +105,37 @@ def run_main_experiment(
             with open(results_file, "rb") as f:
                 results = pickle.load(f)
         except (pickle.PickleError, EOFError) as e:
-            logging.error(f"Error loading existing results file: {e}")
+            logger.error(f"Error loading existing results file: {e}")
             results = {}
     else:
         results = {}
 
     try:
-        logging.info("Loading model and tokenizer...")
+        logger.info("Loading model and tokenizer...")
         if model is None or tokenizer is None:
             model, tokenizer = load_model_and_tokenizer(model_type, model_variant)
-        logging.info("Loaded model and tokenizer.")
+        logger.info("Loaded model and tokenizer.")
 
         tasks = get_all_tasks(tokenizer=tokenizer)
         num_examples = 5
 
         for i, task_name in enumerate(TASKS_TO_EVALUATE):
             if task_name in results:
-                logging.info(f"Skipping task {i + 1}/{len(tasks)}: {task_name}")
+                logger.info(f"Skipping task {i + 1}/{len(tasks)}: {task_name}")
                 continue
 
-            logging.info("\n" + "=" * 50)
-            logging.info(f"Running task {i + 1}/{len(tasks)}: {task_name}")
+            logger.info("\n" + "=" * 50)
+            logger.info(f"Running task {i + 1}/{len(tasks)}: {task_name}")
 
             tic = time.time()
             accuracies, tv_ordered_tokens_by_layer = evaluate_task(model, tokenizer, task_name, num_examples)
 
             if accuracies and tv_ordered_tokens_by_layer:
-                logging.info(f"Baseline Accuracy: {accuracies['baseline']:.2f}")
-                logging.info(f"ICL Accuracy: {accuracies['icl']:.2f}")
-                logging.info(f"Task Vector Accuracy: {accuracies['tv']:.2f}")
-                logging.info("Dev Accuracy by layer: " + ", ".join([f"{layer}: {accuracy:.2f}" for layer, accuracy in accuracies["tv_dev_by_layer"].items()]))
-                logging.info("Time: %.2f", time.time() - tic)
+                logger.info(f"Baseline Accuracy: {accuracies['baseline']:.2f}")
+                logger.info(f"ICL Accuracy: {accuracies['icl']:.2f}")
+                logger.info(f"Task Vector Accuracy: {accuracies['tv']:.2f}")
+                logger.info("Dev Accuracy by layer: " + ", ".join([f"{layer}: {accuracy:.2f}" for layer, accuracy in accuracies["tv_dev_by_layer"].items()]))
+                logger.info("Time: %.2f", time.time() - tic)
 
                 results[task_name] = {
                     "baseline_accuracy": accuracies["baseline"],
@@ -147,9 +147,10 @@ def run_main_experiment(
                 }
                 with open(results_file, "wb") as f:
                     pickle.dump(results, f)
+        del model, tokenizer
 
     except Exception as e:
-        logging.error(f"Error during main experiment execution: {e}", exc_info=True)
+        logger.error(f"Error during main experiment execution: {e}", exc_info=True)
         raise e
 
 
@@ -159,7 +160,7 @@ def get_new_experiment_id() -> str:
             max([int(results_dir) for results_dir in os.listdir(MAIN_RESULTS_DIR) if results_dir.isdigit()] + [0]) + 1
         )
     except Exception as e:
-        logging.error(f"Error generating new experiment ID: {e}", exc_info=True)
+        logger.error(f"Error generating new experiment ID: {e}", exc_info=True)
         raise e
     
 
@@ -181,7 +182,7 @@ def main():
             run_main_experiment(model_type, model_variant)
 
     except (IndexError, ValueError) as e:
-        logging.error(f"Invalid command line arguments: {e}", exc_info=True)
+        logger.error(f"Invalid command line arguments: {e}", exc_info=True)
         raise e
         sys.exit(1)
 
