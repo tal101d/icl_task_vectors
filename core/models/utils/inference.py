@@ -50,6 +50,10 @@ def modified_forward(
 ) -> CausalLMOutputWithPast:
     try:
         context_manager = modified_forward_context_manager(model, forward_modifiers=forward_modifiers)
+        device = model.device
+        if forward_kwargs:
+            forward_kwargs = nested_apply(forward_kwargs, lambda t: t.to(device) if isinstance(t, torch.Tensor) else t)
+
         with context_manager:
             outputs = batch_forward(
                 model,
@@ -110,6 +114,9 @@ def batch_forward(
 
         device = model.device
 
+        if forward_kwargs:
+            forward_kwargs = nested_apply(forward_kwargs, lambda t: t.to(device) if isinstance(t, torch.Tensor) else t)
+
         outputs = []
         for batch_inputs in batches:
             batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
@@ -164,7 +171,6 @@ def batch_generate(
 
         model = ensure_cuda(model)
         device = model.device
-
 
 
         generate_ids = []
