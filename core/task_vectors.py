@@ -30,7 +30,9 @@ def run_icl(
 ) -> List[str]:
     format_dataset_kwargs = {"include_train": include_train}
     inputs = tokenize_datasets(tokenizer, test_datasets, format_dataset_kwargs=format_dataset_kwargs)
-    new_ids = batch_generate(model, tokenizer, inputs=inputs, generate_kwargs={"max_new_tokens": 1, "use_cache": False})
+    new_ids = batch_generate(model, tokenizer, inputs=inputs,
+                             generate_kwargs={"max_new_tokens": 1, "use_cache": False,
+                            "output_attentions": False, "output_hidden_states": False})
     predictions = decode_predictions(new_ids, tokenizer)
 
     return predictions
@@ -255,6 +257,7 @@ def task_vector_accuracy_by_layer(
     # Get input past_key_values
     inputs = tokenize_datasets(tokenizer, datasets, format_dataset_kwargs={"include_train": False})
     outputs = batch_forward(model, inputs=inputs, forward_kwargs={"use_cache": True})
+    torch.cuda.empty_cache()
     if outputs.past_key_values is None:
         raise ValueError("Past key values are required for task vector accuracy by layer")
     past_key_values = outputs.past_key_values
@@ -271,9 +274,9 @@ def task_vector_accuracy_by_layer(
             datasets,
             intermediate_layer=layer_num,
             task_hiddens=task_hiddens,
-            past_key_values=past_key_values,
+            past_key_values=past_key_values
         )
-
+        torch.cuda.empty_cache()
         accuracy = calculate_accuracy_on_datasets(task, answers, datasets)
         accuracies.append(accuracy)
     accuracy_by_layer = {layer: accuracy for layer, accuracy in zip(layers_to_test, accuracies)}
