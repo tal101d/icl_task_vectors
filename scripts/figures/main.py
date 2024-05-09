@@ -7,6 +7,8 @@ import re
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+import sys
+sys.path.append(os.path.abspath('/content/icl_task_vectors'))
 
 from core.config import FIGURES_DIR
 
