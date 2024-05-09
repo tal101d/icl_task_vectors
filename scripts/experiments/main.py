@@ -99,7 +99,6 @@ def run_main_experiment(
         if model is None or tokenizer is None:
             model, tokenizer = load_model_and_tokenizer(model_type, model_variant)
         logger.info("Loaded model and tokenizer.")
-        print_GPU_memory_status()
         logger.info(torch.cuda.memory_summary())
         tasks = get_all_tasks(tokenizer=tokenizer)
         num_examples = 5
