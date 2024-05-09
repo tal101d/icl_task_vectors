@@ -255,6 +255,8 @@ def task_vector_accuracy_by_layer(
     # Get input past_key_values
     inputs = tokenize_datasets(tokenizer, datasets, format_dataset_kwargs={"include_train": False})
     outputs = batch_forward(model, inputs=inputs, forward_kwargs={"use_cache": True})
+    if outputs.past_key_values is None:
+        raise ValueError("Past key values are required for task vector accuracy by layer")
     past_key_values = outputs.past_key_values
     past_key_values = nested_apply(past_key_values, lambda x: x[:, :, :-1])  # remove last token from past_key_values
     inputs["input_ids"] = inputs["input_ids"][:, -1].unsqueeze(1)
