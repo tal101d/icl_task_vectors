@@ -202,8 +202,8 @@ def modulated_generate(
         return answers, task_hiddens
     return answers
 
-
-def modulated_forward(
+# the patching is here!
+def modulated_forward(       
     model: PreTrainedModel,
     inputs: Dict,
     task_hiddens: torch.Tensor,
