@@ -179,7 +179,8 @@ def batch_generate(
         for batch_inputs in batches:
             batch_inputs = nested_apply(batch_inputs, lambda t: t.to(device))
             with torch.no_grad():
-                batch_ids = model.generate(
+                # here is where the models predicts the answers
+                batch_ids = model.generate(    
                     **batch_inputs,
                     **generate_kwargs,
                     do_sample=False,
