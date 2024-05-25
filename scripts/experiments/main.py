@@ -162,7 +162,7 @@ def main():
         if len(sys.argv) == 1:
             # Run all models
             experiment_id = get_new_experiment_id()
-            for model_type, model_variant in MODELS_TO_EVALUATE:
+            for model_type, model_variant in MODELS_TO_EVALUATE: # for loop for each model that we want to test
                 run_main_experiment(model_type, model_variant, experiment_id=experiment_id)
                 torch.cuda.empty_cache()
         else:
